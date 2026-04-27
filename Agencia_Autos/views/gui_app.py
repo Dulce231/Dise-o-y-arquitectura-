@@ -183,7 +183,26 @@ class AutoTallerApp(tk.Tk):
         self.after(100, self._update_all_layouts)
 
     def _build_dashboard_tab(self):
-        self.dashboard_top = tk.Frame(self.dashboard_tab, bg="#f8fafc")
+        dashboard_canvas = tk.Canvas(self.dashboard_tab, bg="#f8fafc", highlightthickness=0)
+        scrollbar = tk.Scrollbar(self.dashboard_tab, orient="vertical", command=dashboard_canvas.yview)
+        dashboard_canvas.configure(yscrollcommand=scrollbar.set)
+        
+        scroll_frame = tk.Frame(dashboard_canvas, bg="#f8fafc")
+        scroll_frame.bind(
+            "<Configure>",
+            lambda e: dashboard_canvas.configure(scrollregion=dashboard_canvas.bbox("all"))
+        )
+        dashboard_canvas.create_window((0, 0), window=scroll_frame, anchor="nw")
+        
+        def on_mousewheel(event):
+            dashboard_canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        dashboard_canvas.bind("<MouseWheel>", on_mousewheel)
+        scroll_frame.bind("<MouseWheel>", on_mousewheel)
+        
+        dashboard_canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        self.dashboard_top = tk.Frame(scroll_frame, bg="#f8fafc")
         self.dashboard_top.pack(fill="x", padx=16, pady=16)
         self.stats_vars = {key: tk.StringVar(value="0") for key in ["total", "espera", "proceso", "finalizado"]}
 
@@ -202,7 +221,7 @@ class AutoTallerApp(tk.Tk):
             tk.Label(card, textvariable=variable, bg=color, fg=TEXT_DARK, font=("Segoe UI", 22, "bold")).pack(anchor="w", padx=16)
             self.card_frames.append(card)
 
-        self.chart_box = tk.Frame(self.dashboard_tab, bg="white")
+        self.chart_box = tk.Frame(scroll_frame, bg="white")
         self.chart_box.pack(fill="x", padx=16, pady=(0, 12))
         tk.Label(self.chart_box, text="Estatus de solicitudes", bg="white", fg=TEXT_DARK, font=("Segoe UI", 12, "bold")).pack(anchor="w", padx=14, pady=(12, 4))
 
@@ -215,7 +234,7 @@ class AutoTallerApp(tk.Tk):
         self.chart_canvas = tk.Canvas(self.chart_box, height=240, bg="white", highlightthickness=0)
         self.chart_canvas.pack(fill="x", padx=12, pady=10)
 
-        self.dashboard_lower = tk.Frame(self.dashboard_tab, bg="#f8fafc")
+        self.dashboard_lower = tk.Frame(scroll_frame, bg="#f8fafc")
         self.dashboard_lower.pack(fill="both", expand=True, padx=16, pady=(0, 16))
         self.dashboard_lower.grid_columnconfigure(0, weight=3)
         self.dashboard_lower.grid_columnconfigure(1, weight=2)
@@ -224,7 +243,7 @@ class AutoTallerApp(tk.Tk):
         self.recent_box = tk.Frame(self.dashboard_lower, bg="white")
         self.recent_box.grid(row=0, column=0, sticky="nsew", padx=(0, 8))
         tk.Label(self.recent_box, text="Servicios recientes", bg="white", fg=TEXT_DARK, font=("Segoe UI", 12, "bold")).pack(anchor="w", padx=14, pady=12)
-        self.recent_tree = ttk.Treeview(self.recent_box, columns=("folio", "cliente", "placas", "estatus"), show="headings", height=10)
+        self.recent_tree = ttk.Treeview(self.recent_box, columns=("folio", "cliente", "placas", "estatus"), show="headings", height=8)
         for col, title, width in [("folio", "Folio", 150), ("cliente", "Cliente", 220), ("placas", "Placas", 120), ("estatus", "Estatus", 120)]:
             self.recent_tree.heading(col, text=title)
             self.recent_tree.column(col, width=width, anchor="center")
@@ -233,14 +252,33 @@ class AutoTallerApp(tk.Tk):
         self.upcoming_box = tk.Frame(self.dashboard_lower, bg="white")
         self.upcoming_box.grid(row=0, column=1, sticky="nsew", padx=(8, 0))
         tk.Label(self.upcoming_box, text="Próximos servicios", bg="white", fg=TEXT_DARK, font=("Segoe UI", 12, "bold")).pack(anchor="w", padx=14, pady=12)
-        self.upcoming_tree = ttk.Treeview(self.upcoming_box, columns=("folio", "cliente", "fecha"), show="headings", height=10)
+        self.upcoming_tree = ttk.Treeview(self.upcoming_box, columns=("folio", "cliente", "fecha"), show="headings", height=8)
         for col, title, width in [("folio", "Folio", 130), ("cliente", "Cliente", 170), ("fecha", "Fecha", 110)]:
             self.upcoming_tree.heading(col, text=title)
             self.upcoming_tree.column(col, width=width, anchor="center")
         self.upcoming_tree.pack(fill="both", expand=True, padx=12, pady=(0, 14))
 
+
     def _build_register_tab(self):
-        wrapper = tk.Frame(self.register_tab, bg="#f8fafc")
+        register_canvas = tk.Canvas(self.register_tab, bg="#f8fafc", highlightthickness=0)
+        scrollbar = tk.Scrollbar(self.register_tab, orient="vertical", command=register_canvas.yview)
+        register_canvas.configure(yscrollcommand=scrollbar.set)
+        
+        scroll_frame = tk.Frame(register_canvas, bg="#f8fafc")
+        scroll_frame.bind(
+            "<Configure>",
+            lambda e: register_canvas.configure(scrollregion=register_canvas.bbox("all"))
+        )
+        register_canvas.create_window((0, 0), window=scroll_frame, anchor="nw")
+        
+        def on_mousewheel_reg(event):
+            register_canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        register_canvas.bind_all("<MouseWheel>", on_mousewheel_reg)
+        
+        register_canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        wrapper = tk.Frame(scroll_frame, bg="#f8fafc")
         wrapper.pack(fill="both", expand=True, padx=16, pady=16)
         wrapper.grid_columnconfigure(0, weight=2)
         wrapper.grid_columnconfigure(1, weight=1)
@@ -447,7 +485,25 @@ class AutoTallerApp(tk.Tk):
                     widget.pack(side="left", padx=4)
 
     def _build_services_tab(self):
-        self.services_top = tk.Frame(self.services_tab, bg="#f8fafc")
+        services_canvas = tk.Canvas(self.services_tab, bg="#f8fafc", highlightthickness=0)
+        scrollbar = tk.Scrollbar(self.services_tab, orient="vertical", command=services_canvas.yview)
+        services_canvas.configure(yscrollcommand=scrollbar.set)
+        
+        scroll_frame = tk.Frame(services_canvas, bg="#f8fafc")
+        scroll_frame.bind(
+            "<Configure>",
+            lambda e: services_canvas.configure(scrollregion=services_canvas.bbox("all"))
+        )
+        services_canvas.create_window((0, 0), window=scroll_frame, anchor="nw")
+        
+        def on_mousewheel_srv(event):
+            services_canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        services_canvas.bind_all("<MouseWheel>", on_mousewheel_srv)
+        
+        services_canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        self.services_top = tk.Frame(scroll_frame, bg="#f8fafc")
         self.services_top.pack(fill="x", padx=16, pady=16)
         self.search_var = tk.StringVar()
         search_entry = tk.Entry(self.services_top, textvariable=self.search_var, relief="flat", bg="white", fg=TEXT_DARK, font=("Segoe UI", 10), insertbackground=TEXT_DARK)
@@ -455,7 +511,7 @@ class AutoTallerApp(tk.Tk):
         ttk.Button(self.services_top, text="Buscar por folio o dueño", command=self.refresh_services_table).pack(side="left", padx=8)
         ttk.Button(self.services_top, text="Ver todo", command=self._reset_search).pack(side="left")
 
-        self.services_table_box = tk.Frame(self.services_tab, bg="white")
+        self.services_table_box = tk.Frame(scroll_frame, bg="white")
         self.services_table_box.pack(fill="both", expand=True, padx=16, pady=(0, 12))
         columns = ("folio", "cliente", "placas", "estatus", "proximo", "llevo")
         self.service_tree = ttk.Treeview(self.services_table_box, columns=columns, show="headings")
@@ -473,7 +529,7 @@ class AutoTallerApp(tk.Tk):
         self.service_tree.pack(fill="both", expand=True, padx=12, pady=12)
         self.service_tree.bind("<Double-1>", lambda event: self.load_selected_service_for_edit())
 
-        self.services_bottom = tk.Frame(self.services_tab, bg="#f8fafc")
+        self.services_bottom = tk.Frame(scroll_frame, bg="#f8fafc")
         self.services_bottom.pack(fill="x", padx=16, pady=(0, 16))
         ttk.Button(self.services_bottom, text="Cargar para editar", command=self.load_selected_service_for_edit).pack(side="left", padx=4)
         ttk.Button(self.services_bottom, text="Comprobante", command=self.generate_selected_receipt).pack(side="left", padx=4)
@@ -525,7 +581,25 @@ class AutoTallerApp(tk.Tk):
         self.notebook.select(self.receipt_tab)
 
     def _build_catalog_tab(self):
-        self.catalog_wrapper = tk.Frame(self.catalog_tab, bg="#f8fafc")
+        catalog_canvas = tk.Canvas(self.catalog_tab, bg="#f8fafc", highlightthickness=0)
+        scrollbar = tk.Scrollbar(self.catalog_tab, orient="vertical", command=catalog_canvas.yview)
+        catalog_canvas.configure(yscrollcommand=scrollbar.set)
+        
+        scroll_frame = tk.Frame(catalog_canvas, bg="#f8fafc")
+        scroll_frame.bind(
+            "<Configure>",
+            lambda e: catalog_canvas.configure(scrollregion=catalog_canvas.bbox("all"))
+        )
+        catalog_canvas.create_window((0, 0), window=scroll_frame, anchor="nw")
+        
+        def on_mousewheel_cat(event):
+            catalog_canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        catalog_canvas.bind_all("<MouseWheel>", on_mousewheel_cat)
+        
+        catalog_canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        self.catalog_wrapper = tk.Frame(scroll_frame, bg="#f8fafc")
         self.catalog_wrapper.pack(fill="both", expand=True, padx=16, pady=16)
 
         self.catalog_top = tk.Frame(self.catalog_wrapper, bg="#f8fafc")

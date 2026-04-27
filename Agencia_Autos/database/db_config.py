@@ -13,6 +13,12 @@ except Exception:
 
 class DatabaseConnection:
     _instance = None
+    MYSQL_CONFIG = {
+        "host": "localhost",
+        "database": "sistema_servicios",
+        "user": "root",
+        "password": "",
+    }
 
     def __new__(cls):
         if cls._instance is None:
@@ -22,27 +28,44 @@ class DatabaseConnection:
             cls._instance.connect()
         return cls._instance
 
-    def connect(self):
-        if self.connection is not None:
-            return
+    def connect(self, preferred_backend=None, force_reconnect=False):
+        if self.connection is not None and not force_reconnect:
+            return True
+
+        if force_reconnect and self.connection is not None:
+            self.close()
+
+        preferred = (preferred_backend or "auto").strip().lower()
+
+        if preferred == "sqlite":
+            self._connect_sqlite()
+            return True
+
+        if preferred == "mysql":
+            return self._connect_mysql()
+
+        if self._connect_mysql():
+            return True
+
+        self._connect_sqlite()
+        return True
+
+    def _connect_mysql(self):
+        if not self.is_mysql_available():
+            return False
 
         try:
-            self.connection = mysql.connector.connect(
-                host="localhost",
-                database="sistema_servicios",
-                user="root",
-                password="",
-            ) if 'mysql' in globals() and mysql else None
-
+            self.connection = mysql.connector.connect(**self.MYSQL_CONFIG)
             if self.connection and self.connection.is_connected():
                 self.backend = "mysql"
                 self._ensure_schema_mysql()
                 print("Conexión a MySQL exitosa")
-                return
+                return True
         except Exception:
             self.connection = None
+            self.backend = None
 
-        self._connect_sqlite()
+        return False
 
     def _connect_sqlite(self):
         db_path = Path(__file__).resolve().parent / "sistema_servicios.db"
@@ -61,6 +84,34 @@ class DatabaseConnection:
         if self.connection is not None:
             self.connection.close()
             self.connection = None
+
+    def is_mysql_available(self):
+        return 'mysql' in globals() and mysql is not None
+
+    def get_available_backends(self):
+        options = ["sqlite"]
+        if self.is_mysql_available():
+            options.insert(0, "mysql")
+        return options
+
+    def switch_backend(self, backend):
+        target = (backend or "").strip().lower()
+        if target not in {"mysql", "sqlite"}:
+            return False, "Backend no válido. Usa mysql o sqlite."
+
+        if target == "mysql" and not self.is_mysql_available():
+            return False, "MySQL Connector no está instalado en el entorno."
+
+        if target == "mysql":
+            ok = self.connect(preferred_backend="mysql", force_reconnect=True)
+            if not ok or self.backend != "mysql":
+                return False, "No fue posible conectar a MySQL. Revisa host, usuario y contraseña."
+            return True, "Conectado a MySQL."
+
+        self.connect(preferred_backend="sqlite", force_reconnect=True)
+        if self.backend != "sqlite":
+            return False, "No fue posible conectar a SQLite."
+        return True, "Conectado a SQLite."
 
     def _prepare_query(self, query):
         if self.backend == "sqlite":

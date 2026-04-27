@@ -240,6 +240,8 @@ class AutoTallerApp(tk.Tk):
         wrapper.pack(fill="both", expand=True, padx=16, pady=16)
         wrapper.grid_columnconfigure(0, weight=2)
         wrapper.grid_columnconfigure(1, weight=1)
+        wrapper.grid_rowconfigure(0, weight=1)
+        wrapper.grid_rowconfigure(1, weight=0)
 
         left = tk.Frame(wrapper, bg="#f8fafc")
         left.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
@@ -306,11 +308,6 @@ class AutoTallerApp(tk.Tk):
         self.obs_text = tk.Text(obs_box, height=5, relief="flat", bg="white", fg=TEXT_DARK, font=("Segoe UI", 10))
         self.obs_text.pack(fill="x")
 
-        actions = tk.Frame(left, bg="#f8fafc")
-        actions.grid(row=7, column=0, columnspan=2, sticky="e", padx=10, pady=18)
-        ttk.Button(actions, text="Cancelar edición", command=self.clear_form).pack(side="right", padx=6)
-        ttk.Button(actions, text="Guardar / Actualizar", style="Success.TButton", command=self.save_service).pack(side="right", padx=6)
-
         right = tk.Frame(wrapper, bg="white")
         right.grid(row=0, column=1, sticky="nsew")
         tk.Label(right, text="Refacciones del servicio", bg="white", fg=TEXT_DARK, font=("Segoe UI", 12, "bold")).pack(anchor="w", padx=14, pady=(14, 6))
@@ -319,6 +316,12 @@ class AutoTallerApp(tk.Tk):
         self.refacciones_listbox.pack(fill="both", expand=True, padx=14, pady=(0, 10))
         self.refacciones_hint = tk.Label(right, text="", bg="white", fg="#475569", font=("Segoe UI", 9), justify="left", wraplength=280)
         self.refacciones_hint.pack(anchor="w", padx=14, pady=(0, 14))
+
+        actions = tk.Frame(wrapper, bg="#f8fafc")
+        actions.grid(row=1, column=0, columnspan=2, sticky="e", padx=10, pady=(10, 0))
+        ttk.Button(actions, text="Cancelar edición", command=self.clear_form).pack(side="right", padx=6)
+        ttk.Button(actions, text="Guardar registro", style="Success.TButton", command=self.save_service).pack(side="right", padx=6)
+        
 
     def _build_services_tab(self):
         top = tk.Frame(self.services_tab, bg="#f8fafc")

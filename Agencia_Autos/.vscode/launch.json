@@ -1,0 +1,18 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Ejecutar main.py",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/main.py",
+            "python": "C:/Users/Dulce/AppData/Local/Programs/Python/Python313/python.exe",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "env": {
+                "TCL_LIBRARY": "C:/Users/Dulce/AppData/Local/Programs/Python/Python313/tcl/tcl8.6",
+                "TK_LIBRARY": "C:/Users/Dulce/AppData/Local/Programs/Python/Python313/tcl/tk8.6"
+            }
+        }
+    ]
+}

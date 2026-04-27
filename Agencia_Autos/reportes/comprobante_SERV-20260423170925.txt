@@ -1,0 +1,23 @@
+COMPROBANTE DE SERVICIO
+========================================
+Folio: SERV-20260423170925
+Fecha registro: 2026-04-23
+
+DATOS DEL CLIENTE
+Cliente: Ramiro
+Telefono: 3456789
+Direccion: carlos pacheco
+
+DATOS DEL VEHICULO
+Vehiculo: Honda Civic - 2022
+Placas: RTYU678
+Color: azul
+
+SERVICIO
+Quien llevo: Roberto
+Estatus: En espera
+Proximo servicio: 2026-05-07
+Refacciones: Sin refacciones registradas
+Observaciones: Fuga de agua
+
+Este comprobante respalda el ingreso del vehiculo a servicio.

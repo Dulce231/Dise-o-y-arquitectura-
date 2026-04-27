@@ -1,0 +1,10 @@
+COMPROBANTE DE SERVICIO
+Folio: SERV-20260417170713
+Cliente: roberto
+Vehículo: Toyota Hilux
+Placas: 456GH
+Estatus: En espera
+Quién llevó: roberto
+Próximo servicio: 2026-04-30
+Refacciones: Bujías
+Observaciones: tira aceite

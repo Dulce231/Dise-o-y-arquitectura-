@@ -38,7 +38,7 @@ class AutoTallerApp(tk.Tk):
         super().__init__()
         self.title("AutoTaller Pro")
         self.geometry("1320x820")
-        self.minsize(1180, 760)
+        self.minsize(980, 640)
         self.configure(bg=BG)
         self.protocol("WM_DELETE_WINDOW", self.safe_exit)
 
@@ -179,12 +179,34 @@ class AutoTallerApp(tk.Tk):
         self._build_catalog_tab()
         self._load_catalogs()
         self.refresh_all()
+        self.bind("<Configure>", self._on_window_resize)
+        self.after(100, self._update_all_layouts)
 
     def _build_dashboard_tab(self):
-        top = tk.Frame(self.dashboard_tab, bg="#f8fafc")
-        top.pack(fill="x", padx=16, pady=16)
+        dashboard_canvas = tk.Canvas(self.dashboard_tab, bg="#f8fafc", highlightthickness=0)
+        scrollbar = tk.Scrollbar(self.dashboard_tab, orient="vertical", command=dashboard_canvas.yview)
+        dashboard_canvas.configure(yscrollcommand=scrollbar.set)
+        
+        scroll_frame = tk.Frame(dashboard_canvas, bg="#f8fafc")
+        scroll_frame.bind(
+            "<Configure>",
+            lambda e: dashboard_canvas.configure(scrollregion=dashboard_canvas.bbox("all"))
+        )
+        dashboard_canvas.create_window((0, 0), window=scroll_frame, anchor="nw")
+        
+        def on_mousewheel(event):
+            dashboard_canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        dashboard_canvas.bind("<MouseWheel>", on_mousewheel)
+        scroll_frame.bind("<MouseWheel>", on_mousewheel)
+        
+        dashboard_canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        self.dashboard_top = tk.Frame(scroll_frame, bg="#f8fafc")
+        self.dashboard_top.pack(fill="x", padx=16, pady=16)
         self.stats_vars = {key: tk.StringVar(value="0") for key in ["total", "espera", "proceso", "finalizado"]}
 
+        self.card_frames = []
         cards = [
             ("Servicios totales", self.stats_vars["total"], "#dbeafe"),
             ("En espera", self.stats_vars["espera"], "#fef3c7"),
@@ -192,59 +214,84 @@ class AutoTallerApp(tk.Tk):
             ("Finalizados", self.stats_vars["finalizado"], "#dcfce7"),
         ]
         for title, variable, color in cards:
-            card = tk.Frame(top, bg=color, width=220, height=90)
+            card = tk.Frame(self.dashboard_top, bg=color, width=220, height=90)
             card.pack(side="left", fill="both", expand=True, padx=8)
             card.pack_propagate(False)
             tk.Label(card, text=title, bg=color, fg=TEXT_DARK, font=("Segoe UI", 10, "bold")).pack(anchor="w", padx=16, pady=(14, 4))
             tk.Label(card, textvariable=variable, bg=color, fg=TEXT_DARK, font=("Segoe UI", 22, "bold")).pack(anchor="w", padx=16)
+            self.card_frames.append(card)
 
-        chart_box = tk.Frame(self.dashboard_tab, bg="white")
-        chart_box.pack(fill="x", padx=16, pady=(0, 12))
-        tk.Label(chart_box, text="Estatus de solicitudes", bg="white", fg=TEXT_DARK, font=("Segoe UI", 12, "bold")).pack(anchor="w", padx=14, pady=(12, 4))
+        self.chart_box = tk.Frame(scroll_frame, bg="white")
+        self.chart_box.pack(fill="x", padx=16, pady=(0, 12))
+        tk.Label(self.chart_box, text="Estatus de solicitudes", bg="white", fg=TEXT_DARK, font=("Segoe UI", 12, "bold")).pack(anchor="w", padx=14, pady=(12, 4))
 
-        filter_row = tk.Frame(chart_box, bg="white")
+        filter_row = tk.Frame(self.chart_box, bg="white")
         filter_row.pack(fill="x", padx=14)
         self.chart_filter = tk.StringVar(value="total")
         tk.Radiobutton(filter_row, text="Total de registros", variable=self.chart_filter, value="total", command=self.refresh_all, bg="white", fg=TEXT_DARK).pack(side="left")
         tk.Radiobutton(filter_row, text="Solo hoy", variable=self.chart_filter, value="hoy", command=self.refresh_all, bg="white", fg=TEXT_DARK).pack(side="left", padx=8)
 
-        self.chart_canvas = tk.Canvas(chart_box, height=240, bg="white", highlightthickness=0)
+        self.chart_canvas = tk.Canvas(self.chart_box, height=240, bg="white", highlightthickness=0)
         self.chart_canvas.pack(fill="x", padx=12, pady=10)
 
-        lower = tk.Frame(self.dashboard_tab, bg="#f8fafc")
-        lower.pack(fill="both", expand=True, padx=16, pady=(0, 16))
-        lower.grid_columnconfigure(0, weight=3)
-        lower.grid_columnconfigure(1, weight=2)
-        lower.grid_rowconfigure(0, weight=1)
+        self.dashboard_lower = tk.Frame(scroll_frame, bg="#f8fafc")
+        self.dashboard_lower.pack(fill="both", expand=True, padx=16, pady=(0, 16))
+        self.dashboard_lower.grid_columnconfigure(0, weight=3)
+        self.dashboard_lower.grid_columnconfigure(1, weight=2)
+        self.dashboard_lower.grid_rowconfigure(0, weight=1)
 
-        recent_box = tk.Frame(lower, bg="white")
-        recent_box.grid(row=0, column=0, sticky="nsew", padx=(0, 8))
-        tk.Label(recent_box, text="Servicios recientes", bg="white", fg=TEXT_DARK, font=("Segoe UI", 12, "bold")).pack(anchor="w", padx=14, pady=12)
-        self.recent_tree = ttk.Treeview(recent_box, columns=("folio", "cliente", "placas", "estatus"), show="headings", height=10)
+        self.recent_box = tk.Frame(self.dashboard_lower, bg="white")
+        self.recent_box.grid(row=0, column=0, sticky="nsew", padx=(0, 8))
+        tk.Label(self.recent_box, text="Servicios recientes", bg="white", fg=TEXT_DARK, font=("Segoe UI", 12, "bold")).pack(anchor="w", padx=14, pady=12)
+        self.recent_tree = ttk.Treeview(self.recent_box, columns=("folio", "cliente", "placas", "estatus"), show="headings", height=8)
         for col, title, width in [("folio", "Folio", 150), ("cliente", "Cliente", 220), ("placas", "Placas", 120), ("estatus", "Estatus", 120)]:
             self.recent_tree.heading(col, text=title)
             self.recent_tree.column(col, width=width, anchor="center")
         self.recent_tree.pack(fill="both", expand=True, padx=12, pady=(0, 14))
 
-        upcoming_box = tk.Frame(lower, bg="white")
-        upcoming_box.grid(row=0, column=1, sticky="nsew", padx=(8, 0))
-        tk.Label(upcoming_box, text="Próximos servicios", bg="white", fg=TEXT_DARK, font=("Segoe UI", 12, "bold")).pack(anchor="w", padx=14, pady=12)
-        self.upcoming_tree = ttk.Treeview(upcoming_box, columns=("folio", "cliente", "fecha"), show="headings", height=10)
+        self.upcoming_box = tk.Frame(self.dashboard_lower, bg="white")
+        self.upcoming_box.grid(row=0, column=1, sticky="nsew", padx=(8, 0))
+        tk.Label(self.upcoming_box, text="Próximos servicios", bg="white", fg=TEXT_DARK, font=("Segoe UI", 12, "bold")).pack(anchor="w", padx=14, pady=12)
+        self.upcoming_tree = ttk.Treeview(self.upcoming_box, columns=("folio", "cliente", "fecha"), show="headings", height=8)
         for col, title, width in [("folio", "Folio", 130), ("cliente", "Cliente", 170), ("fecha", "Fecha", 110)]:
             self.upcoming_tree.heading(col, text=title)
             self.upcoming_tree.column(col, width=width, anchor="center")
         self.upcoming_tree.pack(fill="both", expand=True, padx=12, pady=(0, 14))
 
+
     def _build_register_tab(self):
-        wrapper = tk.Frame(self.register_tab, bg="#f8fafc")
+        register_canvas = tk.Canvas(self.register_tab, bg="#f8fafc", highlightthickness=0)
+        scrollbar = tk.Scrollbar(self.register_tab, orient="vertical", command=register_canvas.yview)
+        register_canvas.configure(yscrollcommand=scrollbar.set)
+        
+        scroll_frame = tk.Frame(register_canvas, bg="#f8fafc")
+        scroll_frame.bind(
+            "<Configure>",
+            lambda e: register_canvas.configure(scrollregion=register_canvas.bbox("all"))
+        )
+        register_canvas.create_window((0, 0), window=scroll_frame, anchor="nw")
+        
+        def on_mousewheel_reg(event):
+            register_canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        register_canvas.bind_all("<MouseWheel>", on_mousewheel_reg)
+        
+        register_canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        wrapper = tk.Frame(scroll_frame, bg="#f8fafc")
         wrapper.pack(fill="both", expand=True, padx=16, pady=16)
         wrapper.grid_columnconfigure(0, weight=2)
         wrapper.grid_columnconfigure(1, weight=1)
+        wrapper.grid_rowconfigure(0, weight=1)
+        wrapper.grid_rowconfigure(1, weight=0)
+        wrapper.grid_rowconfigure(2, weight=0)
 
+        self.register_wrapper = wrapper
         left = tk.Frame(wrapper, bg="#f8fafc")
         left.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
         left.grid_columnconfigure(0, weight=1)
         left.grid_columnconfigure(1, weight=1)
+        self.register_left = left
 
         self.mode_label = tk.Label(left, text="Modo actual: Nuevo registro", bg="#f8fafc", fg=ACCENT, font=("Segoe UI", 12, "bold"))
         self.mode_label.grid(row=0, column=0, columnspan=2, sticky="w", padx=10, pady=(0, 10))
@@ -303,16 +350,24 @@ class AutoTallerApp(tk.Tk):
         obs_box = tk.Frame(left, bg="#f8fafc")
         obs_box.grid(row=6, column=0, columnspan=2, sticky="ew", padx=10, pady=8)
         tk.Label(obs_box, text="Observaciones", bg="#f8fafc", fg=TEXT_DARK, font=("Segoe UI", 10, "bold")).pack(anchor="w", pady=(0, 4))
-        self.obs_text = tk.Text(obs_box, height=5, relief="flat", bg="white", fg=TEXT_DARK, font=("Segoe UI", 10))
+        self.obs_text = tk.Text(
+            obs_box,
+            height=7,
+            relief="solid",
+            bd=1,
+            bg="white",
+            fg=TEXT_DARK,
+            insertbackground=TEXT_DARK,
+            font=("Segoe UI", 11),
+            highlightthickness=1,
+            highlightbackground="#cbd5e1",
+            highlightcolor=ACCENT,
+        )
         self.obs_text.pack(fill="x")
-
-        actions = tk.Frame(left, bg="#f8fafc")
-        actions.grid(row=7, column=0, columnspan=2, sticky="e", padx=10, pady=18)
-        ttk.Button(actions, text="Cancelar edición", command=self.clear_form).pack(side="right", padx=6)
-        ttk.Button(actions, text="Guardar / Actualizar", style="Success.TButton", command=self.save_service).pack(side="right", padx=6)
 
         right = tk.Frame(wrapper, bg="white")
         right.grid(row=0, column=1, sticky="nsew")
+        self.register_right = right
         tk.Label(right, text="Refacciones del servicio", bg="white", fg=TEXT_DARK, font=("Segoe UI", 12, "bold")).pack(anchor="w", padx=14, pady=(14, 6))
         tk.Label(right, text="Selecciona una o varias refacciones para vincularlas al servicio.", bg="white", fg=MUTED, font=("Segoe UI", 9), wraplength=280, justify="left").pack(anchor="w", padx=14, pady=(0, 8))
         self.refacciones_listbox = tk.Listbox(right, selectmode="multiple", relief="flat", bg="#f8fafc", fg=TEXT_DARK, font=("Segoe UI", 10), height=16)
@@ -320,19 +375,146 @@ class AutoTallerApp(tk.Tk):
         self.refacciones_hint = tk.Label(right, text="", bg="white", fg="#475569", font=("Segoe UI", 9), justify="left", wraplength=280)
         self.refacciones_hint.pack(anchor="w", padx=14, pady=(0, 14))
 
-    def _build_services_tab(self):
-        top = tk.Frame(self.services_tab, bg="#f8fafc")
-        top.pack(fill="x", padx=16, pady=16)
-        self.search_var = tk.StringVar()
-        search_entry = tk.Entry(top, textvariable=self.search_var, relief="flat", bg="white", fg=TEXT_DARK, font=("Segoe UI", 10), insertbackground=TEXT_DARK)
-        search_entry.pack(side="left", fill="x", expand=True, ipady=8)
-        ttk.Button(top, text="Buscar por folio o dueño", command=self.refresh_services_table).pack(side="left", padx=8)
-        ttk.Button(top, text="Ver todo", command=self._reset_search).pack(side="left")
+        actions = tk.Frame(wrapper, bg="#f8fafc")
+        actions.grid(row=1, column=0, columnspan=2, sticky="e", padx=10, pady=(10, 0))
+        ttk.Button(actions, text="Cancelar edición", command=self.clear_form).pack(side="right", padx=6)
+        ttk.Button(actions, text="Guardar registro", style="Success.TButton", command=self.save_service).pack(side="right", padx=6)
+        self.register_actions = actions
 
-        table_box = tk.Frame(self.services_tab, bg="white")
-        table_box.pack(fill="both", expand=True, padx=16, pady=(0, 12))
+    def _on_window_resize(self, event=None):
+        if event is not None and event.widget is not self:
+            return
+        self._update_all_layouts()
+
+    def _update_all_layouts(self):
+        compact = self.winfo_width() < 1220
+        extremely_compact = self.winfo_width() < 900
+        
+        self._update_register_layout(compact)
+        self._update_dashboard_layout(compact, extremely_compact)
+        self._update_catalog_layout(compact)
+        self._update_services_layout(extremely_compact)
+
+    def _update_register_layout(self, compact):
+        if not hasattr(self, "register_wrapper"):
+            return
+
+        if compact:
+            self.register_wrapper.grid_columnconfigure(0, weight=1)
+            self.register_wrapper.grid_columnconfigure(1, weight=0)
+            self.register_wrapper.grid_rowconfigure(0, weight=1)
+            self.register_wrapper.grid_rowconfigure(1, weight=1)
+            self.register_wrapper.grid_rowconfigure(2, weight=0)
+
+            self.register_left.grid_configure(row=0, column=0, columnspan=2, padx=(0, 0), pady=(0, 10), sticky="nsew")
+            self.register_right.grid_configure(row=1, column=0, columnspan=2, padx=(0, 0), pady=(0, 10), sticky="nsew")
+            self.register_actions.grid_configure(row=2, column=0, columnspan=2, sticky="e", padx=10, pady=(10, 0))
+        else:
+            self.register_wrapper.grid_columnconfigure(0, weight=2)
+            self.register_wrapper.grid_columnconfigure(1, weight=1)
+            self.register_wrapper.grid_rowconfigure(0, weight=1)
+            self.register_wrapper.grid_rowconfigure(1, weight=0)
+            self.register_wrapper.grid_rowconfigure(2, weight=0)
+
+            self.register_left.grid_configure(row=0, column=0, columnspan=1, padx=(0, 10), pady=(0, 0), sticky="nsew")
+            self.register_right.grid_configure(row=0, column=1, columnspan=1, padx=(0, 0), pady=(0, 0), sticky="nsew")
+            self.register_actions.grid_configure(row=1, column=0, columnspan=2, sticky="e", padx=10, pady=(10, 0))
+
+    def _update_dashboard_layout(self, compact, extremely_compact):
+        if not hasattr(self, "dashboard_top"):
+            return
+
+        for card in self.card_frames:
+            if compact:
+                card.pack(side="top", fill="x", expand=True, padx=8, pady=4)
+                card.pack_propagate(False)
+                card.configure(height=80)
+            else:
+                card.pack(side="left", fill="both", expand=True, padx=8, pady=0)
+                card.pack_propagate(False)
+                card.configure(height=90)
+
+        if extremely_compact:
+            self.dashboard_lower.grid_columnconfigure(0, weight=1)
+            self.dashboard_lower.grid_columnconfigure(1, weight=0)
+            self.dashboard_lower.grid_rowconfigure(0, weight=1)
+            self.dashboard_lower.grid_rowconfigure(1, weight=1)
+            
+            self.recent_box.grid_configure(row=0, column=0, columnspan=1, sticky="nsew", padx=(0, 0), pady=(0, 8))
+            self.upcoming_box.grid_configure(row=1, column=0, columnspan=1, sticky="nsew", padx=(0, 0), pady=(0, 0))
+        else:
+            self.dashboard_lower.grid_columnconfigure(0, weight=3)
+            self.dashboard_lower.grid_columnconfigure(1, weight=2)
+            self.dashboard_lower.grid_rowconfigure(0, weight=1)
+            
+            self.recent_box.grid_configure(row=0, column=0, columnspan=1, sticky="nsew", padx=(0, 8), pady=(0, 0))
+            self.upcoming_box.grid_configure(row=0, column=1, columnspan=1, sticky="nsew", padx=(8, 0), pady=(0, 0))
+
+    def _update_catalog_layout(self, compact):
+        if not hasattr(self, "catalog_body"):
+            return
+
+        if compact:
+            self.catalog_body.grid_columnconfigure(0, weight=1)
+            self.catalog_body.grid_columnconfigure(1, weight=0)
+            self.catalog_body.grid_rowconfigure(0, weight=1)
+            self.catalog_body.grid_rowconfigure(1, weight=1)
+            
+            self.catalog_left.grid_configure(row=0, column=0, columnspan=2, sticky="nsew", padx=(0, 0), pady=(0, 10))
+            self.catalog_right.grid_configure(row=1, column=0, columnspan=2, sticky="nsew", padx=(0, 0), pady=(0, 0))
+        else:
+            self.catalog_body.grid_columnconfigure(0, weight=2)
+            self.catalog_body.grid_columnconfigure(1, weight=1)
+            self.catalog_body.grid_rowconfigure(0, weight=1)
+            
+            self.catalog_left.grid_configure(row=0, column=0, columnspan=1, sticky="nsew", padx=(0, 10), pady=(0, 0))
+            self.catalog_right.grid_configure(row=0, column=1, columnspan=1, sticky="nsew", padx=(0, 0), pady=(0, 0))
+
+    def _update_services_layout(self, extremely_compact):
+        if not hasattr(self, "services_bottom"):
+            return
+
+        if extremely_compact:
+            for widget in self.services_bottom.winfo_children():
+                widget.pack(side="top", fill="x", expand=True, padx=2, pady=2)
+        else:
+            for i, widget in enumerate(self.services_bottom.winfo_children()):
+                if widget.cget("text") == "Eliminar":
+                    widget.pack(side="right", padx=4)
+                else:
+                    widget.pack(side="left", padx=4)
+
+    def _build_services_tab(self):
+        services_canvas = tk.Canvas(self.services_tab, bg="#f8fafc", highlightthickness=0)
+        scrollbar = tk.Scrollbar(self.services_tab, orient="vertical", command=services_canvas.yview)
+        services_canvas.configure(yscrollcommand=scrollbar.set)
+        
+        scroll_frame = tk.Frame(services_canvas, bg="#f8fafc")
+        scroll_frame.bind(
+            "<Configure>",
+            lambda e: services_canvas.configure(scrollregion=services_canvas.bbox("all"))
+        )
+        services_canvas.create_window((0, 0), window=scroll_frame, anchor="nw")
+        
+        def on_mousewheel_srv(event):
+            services_canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        services_canvas.bind_all("<MouseWheel>", on_mousewheel_srv)
+        
+        services_canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        self.services_top = tk.Frame(scroll_frame, bg="#f8fafc")
+        self.services_top.pack(fill="x", padx=16, pady=16)
+        self.search_var = tk.StringVar()
+        search_entry = tk.Entry(self.services_top, textvariable=self.search_var, relief="flat", bg="white", fg=TEXT_DARK, font=("Segoe UI", 10), insertbackground=TEXT_DARK)
+        search_entry.pack(side="left", fill="x", expand=True, ipady=8)
+        ttk.Button(self.services_top, text="Buscar por folio o dueño", command=self.refresh_services_table).pack(side="left", padx=8)
+        ttk.Button(self.services_top, text="Ver todo", command=self._reset_search).pack(side="left")
+
+        self.services_table_box = tk.Frame(scroll_frame, bg="white")
+        self.services_table_box.pack(fill="both", expand=True, padx=16, pady=(0, 12))
         columns = ("folio", "cliente", "placas", "estatus", "proximo", "llevo")
-        self.service_tree = ttk.Treeview(table_box, columns=columns, show="headings")
+        self.service_tree = ttk.Treeview(self.services_table_box, columns=columns, show="headings")
         config = [
             ("folio", "Folio", 160),
             ("cliente", "Dueño", 180),
@@ -347,14 +529,14 @@ class AutoTallerApp(tk.Tk):
         self.service_tree.pack(fill="both", expand=True, padx=12, pady=12)
         self.service_tree.bind("<Double-1>", lambda event: self.load_selected_service_for_edit())
 
-        bottom = tk.Frame(self.services_tab, bg="#f8fafc")
-        bottom.pack(fill="x", padx=16, pady=(0, 16))
-        ttk.Button(bottom, text="Cargar para editar", command=self.load_selected_service_for_edit).pack(side="left", padx=4)
-        ttk.Button(bottom, text="Comprobante", command=self.generate_selected_receipt).pack(side="left", padx=4)
-        ttk.Button(bottom, text="En espera", command=lambda: self.update_status("En espera")).pack(side="left", padx=4)
-        ttk.Button(bottom, text="En proceso", command=lambda: self.update_status("En proceso")).pack(side="left", padx=4)
-        ttk.Button(bottom, text="Finalizado", style="Success.TButton", command=lambda: self.update_status("Finalizado")).pack(side="left", padx=4)
-        ttk.Button(bottom, text="Eliminar", command=self.delete_selected_service).pack(side="right", padx=4)
+        self.services_bottom = tk.Frame(scroll_frame, bg="#f8fafc")
+        self.services_bottom.pack(fill="x", padx=16, pady=(0, 16))
+        ttk.Button(self.services_bottom, text="Cargar para editar", command=self.load_selected_service_for_edit).pack(side="left", padx=4)
+        ttk.Button(self.services_bottom, text="Comprobante", command=self.generate_selected_receipt).pack(side="left", padx=4)
+        ttk.Button(self.services_bottom, text="En espera", command=lambda: self.update_status("En espera")).pack(side="left", padx=4)
+        ttk.Button(self.services_bottom, text="En proceso", command=lambda: self.update_status("En proceso")).pack(side="left", padx=4)
+        ttk.Button(self.services_bottom, text="Finalizado", style="Success.TButton", command=lambda: self.update_status("Finalizado")).pack(side="left", padx=4)
+        ttk.Button(self.services_bottom, text="Eliminar", command=self.delete_selected_service).pack(side="right", padx=4)
 
     def _build_receipt_tab(self):
         wrapper = tk.Frame(self.receipt_tab, bg="#f8fafc")
@@ -399,35 +581,53 @@ class AutoTallerApp(tk.Tk):
         self.notebook.select(self.receipt_tab)
 
     def _build_catalog_tab(self):
-        wrapper = tk.Frame(self.catalog_tab, bg="#f8fafc")
-        wrapper.pack(fill="both", expand=True, padx=16, pady=16)
+        catalog_canvas = tk.Canvas(self.catalog_tab, bg="#f8fafc", highlightthickness=0)
+        scrollbar = tk.Scrollbar(self.catalog_tab, orient="vertical", command=catalog_canvas.yview)
+        catalog_canvas.configure(yscrollcommand=scrollbar.set)
+        
+        scroll_frame = tk.Frame(catalog_canvas, bg="#f8fafc")
+        scroll_frame.bind(
+            "<Configure>",
+            lambda e: catalog_canvas.configure(scrollregion=catalog_canvas.bbox("all"))
+        )
+        catalog_canvas.create_window((0, 0), window=scroll_frame, anchor="nw")
+        
+        def on_mousewheel_cat(event):
+            catalog_canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        catalog_canvas.bind_all("<MouseWheel>", on_mousewheel_cat)
+        
+        catalog_canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        self.catalog_wrapper = tk.Frame(scroll_frame, bg="#f8fafc")
+        self.catalog_wrapper.pack(fill="both", expand=True, padx=16, pady=16)
 
-        top = tk.Frame(wrapper, bg="#f8fafc")
-        top.pack(fill="x", pady=(0, 12))
-        tk.Label(top, text="Catálogo a administrar:", bg="#f8fafc", fg=TEXT_DARK, font=("Segoe UI", 10, "bold")).pack(side="left")
+        self.catalog_top = tk.Frame(self.catalog_wrapper, bg="#f8fafc")
+        self.catalog_top.pack(fill="x", pady=(0, 12))
+        tk.Label(self.catalog_top, text="Catálogo a administrar:", bg="#f8fafc", fg=TEXT_DARK, font=("Segoe UI", 10, "bold")).pack(side="left")
         self.catalog_var = tk.StringVar(value="Marcas")
-        catalog_combo = ttk.Combobox(top, textvariable=self.catalog_var, state="readonly", values=["Marcas", "Modelos", "Años", "Refacciones"], width=20)
+        catalog_combo = ttk.Combobox(self.catalog_top, textvariable=self.catalog_var, state="readonly", values=["Marcas", "Modelos", "Años", "Refacciones"], width=20)
         catalog_combo.pack(side="left", padx=10)
         catalog_combo.bind("<<ComboboxSelected>>", self.on_catalog_change)
 
-        body = tk.Frame(wrapper, bg="#f8fafc")
-        body.pack(fill="both", expand=True)
-        body.grid_columnconfigure(0, weight=2)
-        body.grid_columnconfigure(1, weight=1)
-        body.grid_rowconfigure(0, weight=1)
+        self.catalog_body = tk.Frame(self.catalog_wrapper, bg="#f8fafc")
+        self.catalog_body.pack(fill="both", expand=True)
+        self.catalog_body.grid_columnconfigure(0, weight=2)
+        self.catalog_body.grid_columnconfigure(1, weight=1)
+        self.catalog_body.grid_rowconfigure(0, weight=1)
 
-        left = tk.Frame(body, bg="white")
-        left.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
-        self.catalog_tree = ttk.Treeview(left, show="headings")
+        self.catalog_left = tk.Frame(self.catalog_body, bg="white")
+        self.catalog_left.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
+        self.catalog_tree = ttk.Treeview(self.catalog_left, show="headings")
         self.catalog_tree.pack(fill="both", expand=True, padx=12, pady=12)
         self.catalog_tree.bind("<<TreeviewSelect>>", lambda event: self.load_catalog_item())
 
-        right = tk.Frame(body, bg="white")
-        right.grid(row=0, column=1, sticky="nsew")
-        tk.Label(right, text="Formulario de catálogo", bg="white", fg=TEXT_DARK, font=("Segoe UI", 12, "bold")).pack(anchor="w", padx=14, pady=(14, 8))
-        self.catalog_form_frame = tk.Frame(right, bg="white")
+        self.catalog_right = tk.Frame(self.catalog_body, bg="white")
+        self.catalog_right.grid(row=0, column=1, sticky="nsew")
+        tk.Label(self.catalog_right, text="Formulario de catálogo", bg="white", fg=TEXT_DARK, font=("Segoe UI", 12, "bold")).pack(anchor="w", padx=14, pady=(14, 8))
+        self.catalog_form_frame = tk.Frame(self.catalog_right, bg="white")
         self.catalog_form_frame.pack(fill="both", expand=True, padx=14)
-        self.catalog_button_row = tk.Frame(right, bg="white")
+        self.catalog_button_row = tk.Frame(self.catalog_right, bg="white")
         self.catalog_button_row.pack(fill="x", padx=14, pady=14)
         ttk.Button(self.catalog_button_row, text="Nuevo", command=self.clear_catalog_form).pack(side="left", padx=4)
         ttk.Button(self.catalog_button_row, text="Guardar", style="Success.TButton", command=self.save_catalog_item).pack(side="left", padx=4)

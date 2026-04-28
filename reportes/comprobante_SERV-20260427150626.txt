@@ -1,0 +1,23 @@
+COMPROBANTE DE SERVICIO
+========================================
+Folio: SERV-20260427150626
+Fecha registro: 2026-04-27
+
+DATOS DEL CLIENTE
+Cliente: Manuel Acuña
+Telefono: 8445533987
+Direccion: La hacienda 1230
+
+DATOS DEL VEHICULO
+Vehiculo: Mazda Mazda 3 - 2020
+Placas: 78GTF12
+Color: Negro
+
+SERVICIO
+Quien llevo: Manuela Aldma
+Estatus: En espera
+Proximo servicio: 2026-04-27
+Refacciones: Balatas, Bujías
+Observaciones: Se le detecttó un cierto problema con las balatas y las bujias al momento del chequeo
+
+Este comprobante respalda el ingreso del vehiculo a servicio.

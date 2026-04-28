@@ -167,7 +167,7 @@ class AutoTallerApp(tk.Tk):
         self.catalog_tab = tk.Frame(self.notebook, bg="#f8fafc")
 
         self.notebook.add(self.dashboard_tab, text="Dashboard")
-        self.notebook.add(self.register_tab, text="Registro privado")
+        self.notebook.add(self.register_tab, text="Registro")
         self.notebook.add(self.services_tab, text="Consulta y control")
         self.notebook.add(self.receipt_tab, text="Comprobante")
         self.notebook.add(self.catalog_tab, text="Catálogos")

@@ -1,6 +1,6 @@
 import sqlite3
 from pathlib import Path
-""" Singleton """
+# Singleton para manejar la conexión a la base de datos, con soporte para MySQL y SQLite.
 
 try:
     import mysql.connector

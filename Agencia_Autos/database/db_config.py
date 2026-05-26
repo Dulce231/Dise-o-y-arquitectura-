@@ -219,6 +219,13 @@ class DatabaseConnection:
             stock INTEGER NOT NULL DEFAULT 0
         );
 
+        CREATE TABLE IF NOT EXISTS fallos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nombre TEXT NOT NULL UNIQUE,
+            costo REAL NOT NULL DEFAULT 0,
+            descripcion TEXT
+        );
+
         CREATE TABLE IF NOT EXISTS servicio_refacciones (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             servicio_folio TEXT NOT NULL,
@@ -226,6 +233,15 @@ class DatabaseConnection:
             cantidad INTEGER NOT NULL DEFAULT 1,
             FOREIGN KEY (servicio_folio) REFERENCES servicios(folio) ON DELETE CASCADE,
             FOREIGN KEY (refaccion_id) REFERENCES refacciones(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS servicio_fallos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            servicio_folio TEXT NOT NULL,
+            fallo_id INTEGER NOT NULL,
+            cantidad INTEGER NOT NULL DEFAULT 1,
+            FOREIGN KEY (servicio_folio) REFERENCES servicios(folio) ON DELETE CASCADE,
+            FOREIGN KEY (fallo_id) REFERENCES fallos(id)
         );
         """
 
@@ -273,6 +289,18 @@ class DatabaseConnection:
             cursor.execute(
                 "INSERT OR IGNORE INTO refacciones (id, nombre, precio, stock) VALUES ((SELECT id FROM refacciones WHERE nombre = ?), ?, ?, ?)",
                 (nombre, nombre, precio, stock),
+            )
+
+        fallos = [
+            ("Fuga de aceite", 350.0, "Revisión de empaques, retenes y nivelación"),
+            ("Sistema de frenos desgastado", 480.0, "Inspección de balatas, discos y líquido"),
+            ("Batería descargada", 220.0, "Diagnóstico del sistema eléctrico"),
+            ("Sobrecalentamiento", 520.0, "Revisión de radiador, bomba de agua y anticongelante"),
+        ]
+        for nombre, costo, descripcion in fallos:
+            cursor.execute(
+                "INSERT OR IGNORE INTO fallos (nombre, costo, descripcion) VALUES (?, ?, ?)",
+                (nombre, costo, descripcion),
             )
 
     def _ensure_schema_mysql(self):
@@ -334,6 +362,12 @@ class DatabaseConnection:
                 precio DECIMAL(10,2) NOT NULL DEFAULT 0,
                 stock INT NOT NULL DEFAULT 0
             )""",
+            """CREATE TABLE IF NOT EXISTS fallos (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                nombre VARCHAR(120) NOT NULL UNIQUE,
+                costo DECIMAL(10,2) NOT NULL DEFAULT 0,
+                descripcion VARCHAR(255)
+            )""",
             """CREATE TABLE IF NOT EXISTS servicio_refacciones (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 servicio_folio VARCHAR(30) NOT NULL,
@@ -341,6 +375,14 @@ class DatabaseConnection:
                 cantidad INT NOT NULL DEFAULT 1,
                 FOREIGN KEY (servicio_folio) REFERENCES servicios(folio) ON DELETE CASCADE,
                 FOREIGN KEY (refaccion_id) REFERENCES refacciones(id)
+            )""",
+            """CREATE TABLE IF NOT EXISTS servicio_fallos (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                servicio_folio VARCHAR(30) NOT NULL,
+                fallo_id INT NOT NULL,
+                cantidad INT NOT NULL DEFAULT 1,
+                FOREIGN KEY (servicio_folio) REFERENCES servicios(folio) ON DELETE CASCADE,
+                FOREIGN KEY (fallo_id) REFERENCES fallos(id)
             )""",
         ]
 
@@ -390,4 +432,19 @@ class DatabaseConnection:
                        SELECT 1 FROM refacciones WHERE nombre=%s
                    )""",
                 (nombre, precio, stock, nombre),
+            )
+
+        for nombre, costo, descripcion in [
+            ("Fuga de aceite", 350.0, "Revisión de empaques, retenes y nivelación"),
+            ("Sistema de frenos desgastado", 480.0, "Inspección de balatas, discos y líquido"),
+            ("Batería descargada", 220.0, "Diagnóstico del sistema eléctrico"),
+            ("Sobrecalentamiento", 520.0, "Revisión de radiador, bomba de agua y anticongelante"),
+        ]:
+            self.execute_query(
+                """INSERT INTO fallos (nombre, costo, descripcion)
+                   SELECT %s, %s, %s
+                   WHERE NOT EXISTS (
+                       SELECT 1 FROM fallos WHERE nombre=%s
+                   )""",
+                (nombre, costo, descripcion, nombre),
             )

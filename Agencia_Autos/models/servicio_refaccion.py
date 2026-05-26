@@ -47,3 +47,11 @@ class ServicioRefaccion(BaseRepository):
                    WHERE sr.servicio_folio = %s
                    ORDER BY r.nombre"""
         return self.fetch_all(query, (folio,))
+
+    def get_total_by_service(self, folio):
+        query = """SELECT COALESCE(SUM(r.precio * sr.cantidad), 0) AS total
+                   FROM servicio_refacciones sr
+                   JOIN refacciones r ON sr.refaccion_id = r.id
+                   WHERE sr.servicio_folio = %s"""
+        result = self.fetch_one(query, (folio,))
+        return float(result.get("total", 0) or 0) if result else 0.0

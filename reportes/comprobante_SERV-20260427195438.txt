@@ -15,7 +15,7 @@ Color: Negro
 
 SERVICIO
 Quien llevo: Francisco Villa
-Estatus: En espera
+Estatus: Finalizado
 Proximo servicio: 2027-04-27
 Refacciones: Sin refacciones registradas
 Observaciones: Cambio de balatas y bujias urgentes

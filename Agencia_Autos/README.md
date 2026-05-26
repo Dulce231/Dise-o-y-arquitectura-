@@ -7,12 +7,14 @@ Proyecto con interfaz gráfica para administración de servicios de vehículos.
 - Login privado para administradores.
 - Menú visual por pestañas para navegación.
 - CRUD de marcas, modelos, años y refacciones.
+- Catálogo de fallos comunes con costo de mano de obra.
 - Registro, consulta, modificación y eliminación de servicios.
 - Búsqueda por folio o nombre del dueño.
 - Estatus de servicio: En espera, En proceso y Finalizado.
 - Registro de próximo servicio.
 - Campo de control para saber quién llevó el vehículo.
-- Relación de varias refacciones por servicio.
+- Relación de varias refacciones y fallos por servicio.
+- Totalización de la cuenta por refacciones y por tipo de fallo.
 - Generación de comprobante en PDF o TXT.
 - Dashboard con gráfica por día o por total.
 - Cierre de sesión y salida segura del sistema.

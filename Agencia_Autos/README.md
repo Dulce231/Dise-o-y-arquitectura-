@@ -26,6 +26,10 @@ Proyecto con interfaz gráfica para administración de servicios de vehículos.
 2. Repository
    - En la capa de acceso a datos mediante los modelos y la base común.
 
+## Diagrama visual
+
+Para ver una versión más gráfica de la arquitectura y los patrones, abre [Imagenes/arquitectura_patrones.md](Imagenes/arquitectura_patrones.md).
+
 ## Acceso inicial
 
 - Usuario: admin

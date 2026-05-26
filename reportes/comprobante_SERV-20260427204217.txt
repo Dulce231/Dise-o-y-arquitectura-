@@ -1,0 +1,23 @@
+COMPROBANTE DE SERVICIO
+========================================
+Folio: SERV-20260427204217
+Fecha registro: 2026-04-27
+
+DATOS DEL CLIENTE
+Cliente: Tinoco
+Telefono: 1237894560
+Direccion: Arteaga
+
+DATOS DEL VEHICULO
+Vehiculo: Nissan Sentra - 2026
+Placas: JO753OP
+Color: Verde
+
+SERVICIO
+Quien llevo: Chuy
+Estatus: En espera
+Proximo servicio: 2027-04-06
+Refacciones: Buje, Bujías
+Observaciones: Cambio de buje y de bujias.
+
+Este comprobante respalda el ingreso del vehiculo a servicio.

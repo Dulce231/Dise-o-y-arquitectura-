@@ -1,0 +1,23 @@
+COMPROBANTE DE SERVICIO
+========================================
+Folio: SERV-20260427195104
+Fecha registro: 2026-04-27
+
+DATOS DEL CLIENTE
+Cliente: Humberto Velez
+Telefono: 7894561230
+Direccion: Cerro del pueblo
+
+DATOS DEL VEHICULO
+Vehiculo: Toyota Hilux - 2020
+Placas: KO895LA
+Color: Verde
+
+SERVICIO
+Quien llevo: Maria del bosque
+Estatus: En espera
+Proximo servicio: 2026-04-30
+Refacciones: Filtro de aceite, Filtro de aire
+Observaciones: Filtro de aceite y aire corruptos.
+
+Este comprobante respalda el ingreso del vehiculo a servicio.

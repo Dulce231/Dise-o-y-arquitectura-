@@ -1,4 +1,4 @@
-import tkinter as tk
+import tkinter as tk  
 from datetime import date, datetime, timedelta
 from tkinter import messagebox, ttk
 
@@ -10,10 +10,12 @@ except Exception:
 from database.db_config import DatabaseConnection
 from models.ano import Ano
 from models.cliente import Cliente
+from models.fallo import Fallo
 from models.marca import Marca
 from models.modelo import Modelo
 from models.refaccion import Refaccion
 from models.servicio import Servicio
+from models.servicio_fallo import ServicioFallo
 from models.servicio_refaccion import ServicioRefaccion
 from models.usuario import Usuario
 from models.vehiculo import Vehiculo
@@ -49,10 +51,12 @@ class AutoTallerApp(tk.Tk):
         self.vehiculo_model = Vehiculo()
         self.servicio_model = Servicio()
         self.servicio_refaccion_model = ServicioRefaccion()
+        self.servicio_fallo_model = ServicioFallo()
         self.marca_model = Marca()
         self.modelo_model = Modelo()
         self.ano_model = Ano()
         self.refaccion_model = Refaccion()
+        self.fallo_model = Fallo()
 
         self.current_user = None
         self.editing_folio = None
@@ -61,8 +65,11 @@ class AutoTallerApp(tk.Tk):
         self.modelos = []
         self.anos = []
         self.refacciones = []
+        self.fallos = []
         self.form_vars = {}
         self.stats_vars = {}
+        self.service_total_var = tk.StringVar(value="$0.00")
+        self.service_total_breakdown_var = tk.StringVar(value="Refacciones: $0.00 | Fallos: $0.00")
 
         self._configure_styles()
         self.show_login()
@@ -167,7 +174,7 @@ class AutoTallerApp(tk.Tk):
         self.catalog_tab = tk.Frame(self.notebook, bg="#f8fafc")
 
         self.notebook.add(self.dashboard_tab, text="Dashboard")
-        self.notebook.add(self.register_tab, text="Registro privado")
+        self.notebook.add(self.register_tab, text="Registro")
         self.notebook.add(self.services_tab, text="Consulta y control")
         self.notebook.add(self.receipt_tab, text="Comprobante")
         self.notebook.add(self.catalog_tab, text="Catálogos")
@@ -368,12 +375,27 @@ class AutoTallerApp(tk.Tk):
         right = tk.Frame(wrapper, bg="white")
         right.grid(row=0, column=1, sticky="nsew")
         self.register_right = right
-        tk.Label(right, text="Refacciones del servicio", bg="white", fg=TEXT_DARK, font=("Segoe UI", 12, "bold")).pack(anchor="w", padx=14, pady=(14, 6))
+        tk.Label(right, text="Tipo de fallo", bg="white", fg=TEXT_DARK, font=("Segoe UI", 12, "bold")).pack(anchor="w", padx=14, pady=(14, 6))
+        tk.Label(right, text="Selecciona uno o varios fallos comunes del vehículo.", bg="white", fg=MUTED, font=("Segoe UI", 9), wraplength=280, justify="left").pack(anchor="w", padx=14, pady=(0, 8))
+        self.fallos_listbox = tk.Listbox(right, selectmode="multiple", exportselection=0, relief="flat", bg="#f8fafc", fg=TEXT_DARK, font=("Segoe UI", 10), height=7)
+        self.fallos_listbox.pack(fill="both", expand=False, padx=14, pady=(0, 8))
+        self.fallos_listbox.bind("<<ListboxSelect>>", lambda event: self.update_service_total_preview())
+        self.fallos_hint = tk.Label(right, text="", bg="white", fg="#475569", font=("Segoe UI", 9), justify="left", wraplength=280)
+        self.fallos_hint.pack(anchor="w", padx=14, pady=(0, 10))
+
+        tk.Label(right, text="Refacciones del servicio", bg="white", fg=TEXT_DARK, font=("Segoe UI", 12, "bold")).pack(anchor="w", padx=14, pady=(4, 6))
         tk.Label(right, text="Selecciona una o varias refacciones para vincularlas al servicio.", bg="white", fg=MUTED, font=("Segoe UI", 9), wraplength=280, justify="left").pack(anchor="w", padx=14, pady=(0, 8))
-        self.refacciones_listbox = tk.Listbox(right, selectmode="multiple", relief="flat", bg="#f8fafc", fg=TEXT_DARK, font=("Segoe UI", 10), height=16)
-        self.refacciones_listbox.pack(fill="both", expand=True, padx=14, pady=(0, 10))
+        self.refacciones_listbox = tk.Listbox(right, selectmode="multiple", exportselection=0, relief="flat", bg="#f8fafc", fg=TEXT_DARK, font=("Segoe UI", 10), height=7)
+        self.refacciones_listbox.pack(fill="both", expand=False, padx=14, pady=(0, 8))
+        self.refacciones_listbox.bind("<<ListboxSelect>>", lambda event: self.update_service_total_preview())
         self.refacciones_hint = tk.Label(right, text="", bg="white", fg="#475569", font=("Segoe UI", 9), justify="left", wraplength=280)
-        self.refacciones_hint.pack(anchor="w", padx=14, pady=(0, 14))
+        self.refacciones_hint.pack(anchor="w", padx=14, pady=(0, 10))
+
+        summary_box = tk.Frame(right, bg="#eff6ff")
+        summary_box.pack(fill="x", padx=14, pady=(0, 14))
+        tk.Label(summary_box, text="Total estimado", bg="#eff6ff", fg="#1d4ed8", font=("Segoe UI", 10, "bold")).pack(anchor="w", padx=12, pady=(12, 2))
+        tk.Label(summary_box, textvariable=self.service_total_var, bg="#eff6ff", fg=TEXT_DARK, font=("Segoe UI", 18, "bold")).pack(anchor="w", padx=12)
+        tk.Label(summary_box, textvariable=self.service_total_breakdown_var, bg="#eff6ff", fg="#475569", font=("Segoe UI", 9), wraplength=260, justify="left").pack(anchor="w", padx=12, pady=(0, 12))
 
         actions = tk.Frame(wrapper, bg="#f8fafc")
         actions.grid(row=1, column=0, columnspan=2, sticky="e", padx=10, pady=(10, 0))
@@ -606,7 +628,7 @@ class AutoTallerApp(tk.Tk):
         self.catalog_top.pack(fill="x", pady=(0, 12))
         tk.Label(self.catalog_top, text="Catálogo a administrar:", bg="#f8fafc", fg=TEXT_DARK, font=("Segoe UI", 10, "bold")).pack(side="left")
         self.catalog_var = tk.StringVar(value="Marcas")
-        catalog_combo = ttk.Combobox(self.catalog_top, textvariable=self.catalog_var, state="readonly", values=["Marcas", "Modelos", "Años", "Refacciones"], width=20)
+        catalog_combo = ttk.Combobox(self.catalog_top, textvariable=self.catalog_var, state="readonly", values=["Marcas", "Modelos", "Años", "Refacciones", "Fallos"], width=20)
         catalog_combo.pack(side="left", padx=10)
         catalog_combo.bind("<<ComboboxSelected>>", self.on_catalog_change)
 
@@ -639,6 +661,7 @@ class AutoTallerApp(tk.Tk):
         self.modelos = self.modelo_model.get_all()
         self.anos = self.ano_model.get_all()
         self.refacciones = self.refaccion_model.get_all()
+        self.fallos = self.fallo_model.get_all()
 
         if hasattr(self, "inputs"):
             self.inputs["marca"]["values"] = [m["nombre"] for m in self.marcas]
@@ -654,11 +677,18 @@ class AutoTallerApp(tk.Tk):
         if hasattr(self, "refacciones_listbox"):
             self.refacciones_listbox.delete(0, "end")
             for item in self.refacciones:
-                self.refacciones_listbox.insert("end", f"{item['nombre']} | ${item['precio']} | stock {item['stock']}")
+                self.refacciones_listbox.insert("end", f"{item['nombre']} | ${float(item['precio']):,.2f} | stock {item['stock']}")
             self.refacciones_hint.config(text=f"Disponibles: {len(self.refacciones)}")
+
+        if hasattr(self, "fallos_listbox"):
+            self.fallos_listbox.delete(0, "end")
+            for item in self.fallos:
+                self.fallos_listbox.insert("end", f"{item['nombre']} | ${float(item['costo']):,.2f}")
+            self.fallos_hint.config(text=f"Disponibles: {len(self.fallos)}")
 
         if hasattr(self, "catalog_var"):
             self.on_catalog_change()
+        self.update_service_total_preview()
 
     def _on_brand_change(self, event=None):
         brand = self.form_vars["marca"].get()
@@ -757,10 +787,47 @@ class AutoTallerApp(tk.Tk):
                 pass
         if hasattr(self, "refacciones_listbox"):
             self.refacciones_listbox.selection_clear(0, "end")
+        if hasattr(self, "fallos_listbox"):
+            self.fallos_listbox.selection_clear(0, "end")
         self._load_catalogs()
+        self.update_service_total_preview()
 
     def _get_selected_refaccion_ids(self):
         return [self.refacciones[index]["id"] for index in self.refacciones_listbox.curselection()] if self.refacciones else []
+
+    def _get_selected_fallo_ids(self):
+        return [self.fallos[index]["id"] for index in self.fallos_listbox.curselection()] if self.fallos else []
+
+    def _format_currency(self, value):
+        return f"${float(value or 0):,.2f}"
+
+    def _sum_refacciones(self, refacciones):
+        return sum(float(item.get("precio", 0) or 0) * int(item.get("cantidad", 1) or 1) for item in refacciones)
+
+    def _sum_fallos(self, fallos):
+        return sum(float(item.get("costo", 0) or 0) * int(item.get("cantidad", 1) or 1) for item in fallos)
+
+    def update_service_total_preview(self):
+        if not hasattr(self, "refacciones_listbox") or not hasattr(self, "fallos_listbox"):
+            return 0.0, 0.0, 0.0
+
+        selected_refacciones = set(self._get_selected_refaccion_ids())
+        selected_fallos = set(self._get_selected_fallo_ids())
+        total_refacciones = sum(float(item.get("precio", 0) or 0) * int(item.get("cantidad", 1) or 1) for item in self.refacciones if item["id"] in selected_refacciones)
+        total_fallos = sum(float(item.get("costo", 0) or 0) * int(item.get("cantidad", 1) or 1) for item in self.fallos if item["id"] in selected_fallos)
+        total_general = total_refacciones + total_fallos
+        self.service_total_var.set(self._format_currency(total_general))
+        self.service_total_breakdown_var.set(f"Refacciones: {self._format_currency(total_refacciones)} | Fallos: {self._format_currency(total_fallos)}")
+        return total_refacciones, total_fallos, total_general
+
+    def _get_service_details(self, folio):
+        datos = self.servicio_model.get_by_folio(folio) or {}
+        datos["refacciones"] = self.servicio_refaccion_model.get_by_service(folio)
+        datos["fallos"] = self.servicio_fallo_model.get_by_service(folio)
+        datos["total_refacciones"] = self.servicio_refaccion_model.get_total_by_service(folio)
+        datos["total_fallos"] = self.servicio_fallo_model.get_total_by_service(folio)
+        datos["total_general"] = float(datos["total_refacciones"]) + float(datos["total_fallos"])
+        return datos
 
     def save_service(self):
         try:
@@ -776,6 +843,16 @@ class AutoTallerApp(tk.Tk):
             fecha_proximo = self.form_vars["fecha_proximo"].get().strip()
             observaciones = self.obs_text.get("1.0", "end").strip()
             refaccion_ids = self._get_selected_refaccion_ids()
+            fallo_ids = self._get_selected_fallo_ids()
+
+            refacciones_validas = {item["id"] for item in self.refacciones}
+            fallos_validos = {item["id"] for item in self.fallos}
+            if any(refaccion_id not in refacciones_validas for refaccion_id in refaccion_ids):
+                messagebox.showerror("Datos inválidos", "Hay una refacción seleccionada que ya no existe.")
+                return
+            if any(fallo_id not in fallos_validos for fallo_id in fallo_ids):
+                messagebox.showerror("Datos inválidos", "Hay un fallo seleccionado que ya no existe.")
+                return
 
             required = [nombre, placas, marca_nombre, modelo_nombre, ano_valor, quien_llevo]
             if not all(required):
@@ -815,8 +892,8 @@ class AutoTallerApp(tk.Tk):
                 return
 
             self.servicio_refaccion_model.replace_for_service(folio, refaccion_ids)
-            datos = self.servicio_model.get_by_folio(folio) or {}
-            datos["refacciones"] = self.servicio_refaccion_model.get_by_service(folio)
+            self.servicio_fallo_model.replace_for_service(folio, fallo_ids)
+            datos = self._get_service_details(folio)
             comprobante = generar_comprobante(folio, datos)
             self._show_receipt_in_tab(folio, datos)
 
@@ -871,6 +948,15 @@ class AutoTallerApp(tk.Tk):
             if item["id"] in ids:
                 self.refacciones_listbox.selection_set(index)
 
+        fallos = self.servicio_fallo_model.get_by_service(folio)
+        ids_fallos = {r["fallo_id"] for r in fallos}
+        self.fallos_listbox.selection_clear(0, "end")
+        for index, item in enumerate(self.fallos):
+            if item["id"] in ids_fallos:
+                self.fallos_listbox.selection_set(index)
+
+        self.update_service_total_preview()
+
         self.notebook.select(self.register_tab)
 
     def update_status(self, status):
@@ -886,6 +972,7 @@ class AutoTallerApp(tk.Tk):
             return
         if messagebox.askyesno("Confirmar", f"¿Deseas eliminar el servicio {folio}?"):
             self.servicio_refaccion_model.clear_for_service(folio, restore_stock=True)
+            self.servicio_fallo_model.clear_for_service(folio)
             self.servicio_model.delete(folio)
             if self.editing_folio == folio:
                 self.clear_form()
@@ -899,7 +986,7 @@ class AutoTallerApp(tk.Tk):
         if not datos:
             messagebox.showerror("Error", "No se encontró el servicio seleccionado.")
             return
-        datos["refacciones"] = self.servicio_refaccion_model.get_by_service(folio)
+        datos = self._get_service_details(folio)
         self._show_receipt_in_tab(folio, datos)
         ruta = generar_comprobante(folio, datos)
         messagebox.showinfo("Comprobante generado", f"Archivo creado en:\n{ruta}")
@@ -928,6 +1015,11 @@ class AutoTallerApp(tk.Tk):
             columns = ("id", "año")
             self._set_catalog_tree(columns, ["ID", "Año"])
             self._catalog_field("Año", "año")
+        elif catalog == "Fallos":
+            columns = ("id", "nombre", "costo")
+            self._set_catalog_tree(columns, ["ID", "Fallo", "Costo"])
+            self._catalog_field("Fallo", "nombre")
+            self._catalog_field("Costo", "costo")
         else:
             columns = ("id", "nombre", "precio", "stock")
             self._set_catalog_tree(columns, ["ID", "Nombre", "Precio", "Stock"])
@@ -968,6 +1060,9 @@ class AutoTallerApp(tk.Tk):
         elif catalog == "Años":
             for item in self.ano_model.get_all():
                 self.catalog_tree.insert("", "end", values=(item["id"], item["año"]))
+        elif catalog == "Fallos":
+            for item in self.fallo_model.get_all():
+                self.catalog_tree.insert("", "end", values=(item["id"], item["nombre"], item["costo"]))
         else:
             for item in self.refaccion_model.get_all():
                 self.catalog_tree.insert("", "end", values=(item["id"], item["nombre"], item["precio"], item["stock"]))
@@ -991,6 +1086,9 @@ class AutoTallerApp(tk.Tk):
             self.catalog_fields["marca"].set(values[2])
         elif catalog == "Años":
             self.catalog_fields["año"].set(values[1])
+        elif catalog == "Fallos":
+            self.catalog_fields["nombre"].set(values[1])
+            self.catalog_fields["costo"].set(values[2])
         else:
             self.catalog_fields["nombre"].set(values[1])
             self.catalog_fields["precio"].set(values[2])
@@ -1021,6 +1119,13 @@ class AutoTallerApp(tk.Tk):
                     self.ano_model.update(self.catalog_current_id, año)
                 else:
                     self.ano_model.create(año)
+            elif catalog == "Fallos":
+                nombre = self.catalog_fields["nombre"].get().strip()
+                costo = float(self.catalog_fields["costo"].get().strip())
+                if self.catalog_current_id:
+                    self.fallo_model.update(self.catalog_current_id, nombre, costo)
+                else:
+                    self.fallo_model.create(nombre, costo)
             else:
                 nombre = self.catalog_fields["nombre"].get().strip()
                 precio = float(self.catalog_fields["precio"].get().strip())
@@ -1055,6 +1160,8 @@ class AutoTallerApp(tk.Tk):
                 result = self.modelo_model.delete(item_id)
             elif catalog == "Años":
                 result = self.ano_model.delete(item_id)
+            elif catalog == "Fallos":
+                result = self.fallo_model.delete(item_id)
             else:
                 result = self.refaccion_model.delete(item_id)
 
@@ -1064,6 +1171,7 @@ class AutoTallerApp(tk.Tk):
                     "Modelos": "modelo",
                     "Años": "año",
                     "Refacciones": "refacción",
+                    "Fallos": "fallo",
                 }.get(catalog, "registro")
                 messagebox.showwarning(
                     "No se puede eliminar",

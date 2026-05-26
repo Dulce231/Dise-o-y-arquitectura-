@@ -1,0 +1,23 @@
+COMPROBANTE DE SERVICIO
+========================================
+Folio: SERV-20260427195438
+Fecha registro: 2026-04-27
+
+DATOS DEL CLIENTE
+Cliente: Carlos Salinas
+Telefono: 4567891230
+Direccion: Calle Olivo 1500
+
+DATOS DEL VEHICULO
+Vehiculo: Nissan Versa - 2019
+Placas: BL894ZO
+Color: Negro
+
+SERVICIO
+Quien llevo: Francisco Villa
+Estatus: Finalizado
+Proximo servicio: 2027-04-27
+Refacciones: Sin refacciones registradas
+Observaciones: Cambio de balatas y bujias urgentes
+
+Este comprobante respalda el ingreso del vehiculo a servicio.

@@ -1,0 +1,27 @@
+COMPROBANTE DE SERVICIO
+========================================
+Folio: SERV-20260525181234
+Fecha registro: 2026-05-25
+
+DATOS DEL CLIENTE
+Cliente: Antonio Martinez
+Telefono: 123456789
+Direccion: Cerrin
+
+DATOS DEL VEHICULO
+Vehiculo: Chevy Pop - 2017
+Placas: AX78BC
+Color: ROJO
+
+SERVICIO
+Quien llevo: Antonio Marinez
+Estatus: En espera
+Proximo servicio: 2026-06-17
+Refacciones: Balatas ($950.00), Bujías ($420.00), Filtro de aceite ($180.00), Filtro de aire ($300.00)
+Total refacciones: $1,850.00
+Fallos: Fuga de aceite ($350.00), Sistema de frenos desgastado ($480.00), Sobrecalentamiento ($520.00)
+Total fallos: $1,350.00
+Total general: $3,200.00
+Observaciones: Ta muy fregado compare
+
+Este comprobante respalda el ingreso del vehiculo a servicio.

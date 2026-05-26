@@ -186,6 +186,30 @@ INSERT INTO `refacciones` (`id`, `nombre`, `precio`, `stock`, `created_at`) VALU
 -- --------------------------------------------------------
 
 --
+-- Estructura de tabla para la tabla `fallos`
+--
+
+CREATE TABLE `fallos` (
+  `id` int(11) NOT NULL,
+  `nombre` varchar(120) NOT NULL,
+  `costo` decimal(10,2) NOT NULL DEFAULT 0.00,
+  `descripcion` varchar(255) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Volcado de datos para la tabla `fallos`
+--
+
+INSERT INTO `fallos` (`id`, `nombre`, `costo`, `descripcion`, `created_at`) VALUES
+(1, 'Fuga de aceite', 350.00, 'Revisión de empaques, retenes y nivelación', '2026-05-25 00:00:00'),
+(2, 'Sistema de frenos desgastado', 480.00, 'Inspección de balatas, discos y líquido', '2026-05-25 00:00:00'),
+(3, 'Batería descargada', 220.00, 'Diagnóstico del sistema eléctrico', '2026-05-25 00:00:00'),
+(4, 'Sobrecalentamiento', 520.00, 'Revisión de radiador, bomba de agua y anticongelante', '2026-05-25 00:00:00');
+
+-- --------------------------------------------------------
+
+--
 -- Estructura de tabla para la tabla `servicios`
 --
 
@@ -236,6 +260,23 @@ CREATE TABLE `servicio_refacciones` (
   `refaccion_id` int(11) NOT NULL,
   `cantidad` int(11) NOT NULL DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `servicio_fallos`
+--
+
+CREATE TABLE `servicio_fallos` (
+  `id` int(11) NOT NULL,
+  `servicio_folio` varchar(30) NOT NULL,
+  `fallo_id` int(11) NOT NULL,
+  `cantidad` int(11) NOT NULL DEFAULT 1
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+ALTER TABLE `servicio_fallos`
+  ADD CONSTRAINT `servicio_fallos_ibfk_1` FOREIGN KEY (`servicio_folio`) REFERENCES `servicios` (`folio`) ON DELETE CASCADE,
+  ADD CONSTRAINT `servicio_fallos_ibfk_2` FOREIGN KEY (`fallo_id`) REFERENCES `fallos` (`id`);
 
 --
 -- Volcado de datos para la tabla `servicio_refacciones`

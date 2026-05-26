@@ -1,0 +1,23 @@
+COMPROBANTE DE SERVICIO
+========================================
+Folio: SERV-20260427193617
+Fecha registro: 2026-04-27
+
+DATOS DEL CLIENTE
+Cliente: Dulce Maria
+Telefono: 8447569213
+Direccion: Guayulera
+
+DATOS DEL VEHICULO
+Vehiculo: Chevy Pop - 2016
+Placas: DS345LO
+Color: rojo
+
+SERVICIO
+Quien llevo: Ricardo
+Estatus: En proceso
+Proximo servicio: 2026-12-24
+Refacciones: Sin refacciones registradas
+Observaciones: Filtro de aire muy sucio necesita cambio. El cliente dijo que lo sopleteara
+
+Este comprobante respalda el ingreso del vehiculo a servicio.
